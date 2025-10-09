@@ -1,6 +1,7 @@
 {
   "csv_file": "./data/europe.csv",
   "epochs": 1000,
-  "r": 1,
-  "k": 7
+  "r": 7,
+  "k": 7,
+  "n": 0.01
 }

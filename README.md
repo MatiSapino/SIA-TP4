@@ -52,9 +52,14 @@ No modificar él `csv_file` ya que este define él .csv a utilizar.
 ---
 
 ### Radio
-- **`r`**: valor del radio del vecindario.
+- **`r`**: valor del radio del vecindario inicial.
 
 ---
 
 ### Dimensión de la Grilla
 - **`k`**: dimensión de la grilla (k x k).
+
+---
+
+### Tasa de Aprendizaje
+- **`n`**: valor de la tasa de aprendizaje inicial
