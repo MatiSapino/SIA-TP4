@@ -46,8 +46,8 @@ No modificar él `csv_file` ya que este define él .csv a utilizar.
 
 ---
 
-### Epocas
-- **`epochs`**: cantidad maxima de épocas (iteraciones)
+### Factor de Epocas
+- **`epochs_factor`**: factor de cantidad maxima de épocas (iteraciones)
 
 ---
 
@@ -56,10 +56,17 @@ No modificar él `csv_file` ya que este define él .csv a utilizar.
 
 ---
 
+### Radio Constante
+- **`r_constant`**: booleano para mantener el radio constante o no.
+
+---
+
 ### Dimensión de la Grilla
 - **`k`**: dimensión de la grilla (k x k).
 
 ---
 
-### Tasa de Aprendizaje
-- **`n`**: valor de la tasa de aprendizaje inicial
+### Similitud
+- **`similarity_metric`**: medida de similitud. Opciones:
+  - `euclidean`
+  - `exponential`
