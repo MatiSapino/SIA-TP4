@@ -79,6 +79,7 @@ class Kohonen:
     def get_bmus_for_data(self, data: np.ndarray) -> np.ndarray:
         num_records = data.shape[0]
         bmu_assignments = np.zeros(num_records, dtype=int)
-        for record_index, pattern in enumerate(data):
+        for record_index in range(num_records):
+            pattern = data[record_index, :]
             bmu_assignments[record_index] = self._get_bmu_index(pattern)
         return bmu_assignments
