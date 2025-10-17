@@ -1,4 +1,5 @@
 {
+  "algorithm": "kohonen",
   "csv_file": "./data/europe.csv",
   "epochs_factor": 2,
   "r": 7,

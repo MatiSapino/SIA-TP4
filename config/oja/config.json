@@ -1,0 +1,6 @@
+{
+  "algorithm": "oja",
+  "csv_file": "./data/europe.csv",
+  "epochs": 1000,
+  "n": 0.01
+}

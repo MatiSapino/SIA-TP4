@@ -20,7 +20,7 @@ objetivo de evaluar Métodos de Aprendizaje No Supervisado usando Modelos de Red
 Parado en la carpeta del tp4 ejecutar
 
 ```sh
-  pipenv install
+  pipenv install -r requirements.txt
 ```
 
 Para instalar las dependencias necesarias en el ambiente virtual
@@ -28,16 +28,28 @@ Para instalar las dependencias necesarias en el ambiente virtual
 ## Ejecución
 Para ejecutar el algoritmo
 ```
-pipenv run python main.py --config-file ./config/config.json
+pipenv run python main.py --config-file <config-path>
+```
+
+Por ejemplo:
+```
+pipenv run python main.py --config-file ./config/kohonen/config.json
 ```
 
 En el archivo `config.json` se encuentran todos los **hiperparámetros** que controlan el comportamiento del algoritmo.
 
 ## Uso
 1. Editar el archivo `config.json` con los valores deseados.
-No modificar él `csv_file` ya que este define él .csv a utilizar.
+No modificar él `csv_file` ni él `algorithm` ya que este define él .csv y el algoritmo a utilizar.
 2. Ejecutar el programa principal del algoritmo.  
    El programa leerá automáticamente esta configuración y aplicará los parámetros.
+
+---
+
+### Algoritmo
+- **`algorithm`**: algoritmo a utilizar. Opciones:
+  - `kohonen`
+  - `oja`
 
 ---
 
@@ -47,7 +59,7 @@ No modificar él `csv_file` ya que este define él .csv a utilizar.
 ---
 
 ### Factor de Epocas
-- **`epochs_factor`**: factor de cantidad maxima de épocas (iteraciones)
+- **`epochs_factor`**: factor de cantidad maxima de épocas (iteraciones).
 
 ---
 
@@ -70,3 +82,13 @@ No modificar él `csv_file` ya que este define él .csv a utilizar.
 - **`similarity_metric`**: medida de similitud. Opciones:
   - `euclidean`
   - `exponential`
+
+---
+
+### Epocas
+- **`epochs`**: cantidad maxima de épocas (iteraciones).
+
+---
+
+### Tasa de aprendizaje
+- **`n`**: valor de la tasa de aprendizaje, debe ser menor o igual a `0.5`
