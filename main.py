@@ -49,6 +49,49 @@ def run_kohonen(config, standardization_data, countries):
     for bmu_index, country_list in country_map.items():
         print(f"Neuron {bmu_index}: {', '.join(country_list)}")
 
+
+def run_pca_manual(standardization_data):
+    print("--- PCA (Manual) ---")
+    pca_manual = Pca(data=standardization_data)
+    eigenvalues = pca_manual.get_eigenvalues()
+    eigenvectors = pca_manual.get_eigenvectors()
+    pc_scores = pca_manual.get_principal_components()
+    print("\nEigenvalues:")
+    print(eigenvalues)
+    print("\nFirst Principal Component PC1:")
+    print(eigenvectors[:, 0])
+    print("\nFirst 5 Principal Component Rows (PC Scores - Y):")
+    print(pc_scores[:5, :])
+    print("\n")
+    print("-" * 50)
+    return {
+        'eigenvalues': eigenvalues,
+        'eigenvectors': eigenvectors,
+        'pc_scores': pc_scores
+    }
+
+
+def run_pca_sklearn(standardization_data, num_variables):
+    print("\n--- PCA (Sklearn) ---")
+    pca_sklearn = PCA(n_components=num_variables)
+    pca_scores_sklearn = pca_sklearn.fit_transform(standardization_data)
+    eigenvalues = pca_sklearn.explained_variance_
+    components = pca_sklearn.components_
+    print("\nEigenvalues:")
+    print(eigenvalues)
+    print("\nFirst Principal Component PC1:")
+    print(components[0])
+    print("\nFirst 5 Principal Component Rows (PC Scores - Y):")
+    print(pca_scores_sklearn[:5, :])
+    print("\n")
+    print("-" * 50)
+    return {
+        'eigenvalues': eigenvalues,
+        'components': components,
+        'pc_scores': pca_scores_sklearn,
+        'model': pca_sklearn
+    }
+
 def run_oja(config, standardization_data, num_variables):
     learning_rate = config['n']
     epochs = config['epochs']
@@ -99,7 +142,7 @@ def run_oja(config, standardization_data, num_variables):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Unsupervised Learning.')
-    parser.add_argument('--config-file', type=str, default="./configs/config.json", help='Path to the configuration JSON file.')
+    parser.add_argument('--config-file', type=str, default="./config/kohonen/config.json", help='Path to the configuration JSON file.')
     parser_args = parser.parse_args()
 
     with open(parser_args.config_file, 'r') as file:
@@ -122,5 +165,9 @@ if __name__ == "__main__":
         run_kohonen(config_data, standardization_data_input, countries_data)
     elif algorithm == "oja":
         run_oja(config_data, standardization_data_input, num_variables_data)
+    elif algorithm == "pca_manual":
+        run_pca_manual(standardization_data_input)
+    elif algorithm == "pca_sklearn":
+        run_pca_sklearn(standardization_data_input, num_variables_data)
     else:
-        raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kohonen' or 'oja'.")
+        raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kohonen', 'oja', 'pca_manual', or 'pca_sklearn'.")
