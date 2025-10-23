@@ -1,0 +1,9 @@
+{
+  "algorithm": "hopfield",
+  "csv_file": "./data/europe.csv",
+  "epochs_factor": 2,
+  "r": 7,
+  "r_constant": false,
+  "k": 7,
+  "similarity_metric": "euclidean"
+}

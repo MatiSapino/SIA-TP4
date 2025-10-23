@@ -7,11 +7,14 @@ import json as _json
 import matplotlib.pyplot as plt
 
 from matplotlib import cm
+
+from src.hopfield.hopfield import Hopfield
 from src.kohonen.kohonen import Kohonen, EUCLIDEAN, EXPONENTIAL
 from src.oja.oja import Oja
 from src.standardization.standardization import Standardization
 from src.pca.pca import Pca
 from sklearn.decomposition import PCA
+
 
 def _create_biplot(components, pc_scores, countries, output_dir, var_names=None):
     """Create and save a biplot (PC2 vs PC1) with variable vectors and country labels."""
@@ -154,7 +157,7 @@ def run_pca_sklearn(standardization_data, num_variables, countries=None, var_nam
         countries_list = list(countries)
     except Exception:
         countries_list = [str(c) for c in countries]
-    df_scores = pd.DataFrame(pca_scores_sklearn, columns=[f'PC{i+1}' for i in range(pca_scores_sklearn.shape[1])])
+    df_scores = pd.DataFrame(pca_scores_sklearn, columns=[f'PC{i + 1}' for i in range(pca_scores_sklearn.shape[1])])
     df_scores.insert(0, 'Country', countries_list)
     labeled_scores_path = os.path.join(output_dir, 'pca_sklearn_scores_labeled.csv')
     df_scores.to_csv(labeled_scores_path, index=False)
@@ -162,6 +165,7 @@ def run_pca_sklearn(standardization_data, num_variables, countries=None, var_nam
     # create plots
     _create_biplot(components, pca_scores_sklearn, countries_list, output_dir, var_names=var_names)
     _create_index_plot(pca_scores_sklearn, countries_list, output_dir)
+
 
 def run_oja(config, standardization_data, num_variables):
     learning_rate = config['n']
@@ -211,6 +215,7 @@ def run_oja(config, standardization_data, num_variables):
     oja_error = np.linalg.norm(oja_weights_aligned - pca_sklearn.components_[0]) ** 2
     print(f"\nSquared Error between Oja and Sklearn (||Oja - Sklearn||^2): {oja_error:.6f}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Unsupervised Learning.')
     parser.add_argument('--config-file', type=str, default="./config/kohonen/config.json", help='Path to the configuration JSON file.')
@@ -241,5 +246,12 @@ if __name__ == "__main__":
     elif algorithm == "pca_sklearn":
         var_names = df.drop('Country', axis=1).columns.tolist()
         run_pca_sklearn(standardization_data_input, num_variables_data, countries=countries_data, var_names=var_names)
+    elif algorithm == "hopfield": #TODO: esto es solo para testear hopfield, hay que implementar el ej del tp
+        hopfield = Hopfield(np.array([
+            [1, 1, -1, -1],
+            [-1, -1, 1 ,1]
+        ]))
+        hopfield.print_weights()
+        hopfield.train(np.array([1, -1, -1, -1]))
     else:
         raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kohonen', 'oja', 'pca_manual', or 'pca_sklearn'.")
