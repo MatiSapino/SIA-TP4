@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import json as _json
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 from matplotlib import cm
 
@@ -216,9 +217,77 @@ def run_oja(config, standardization_data, num_variables):
     print(f"\nSquared Error between Oja and Sklearn (||Oja - Sklearn||^2): {oja_error:.6f}")
 
 
+# Devuelve un mapa con las matrices de las letras para el ejercicio de Hopfield.
+# Las claves son las letras y los valores son las matrices 5x5 representadas como arrays de NumPy.
+def cargar_letras_numpy(ruta_archivo: str):
+    letras = {}
+    with open(ruta_archivo, "r") as f:
+        lineas = [line.strip() for line in f.readlines()]
+
+    i = 0
+    while i < len(lineas):
+        if not lineas[i]:  # línea vacía
+            i += 1
+        else:
+            letra = lineas[i]
+            matriz = []
+            for j in range(1, 6):
+                fila = [int(x) for x in lineas[i + j].split()]
+                matriz.append(fila)
+            letras[letra] = np.array(matriz)
+            i += 6  # letra + 5 filas
+
+    return letras
+
+
+
+
+
+def plot_letra(matriz: np.ndarray):
+    if matriz.ndim == 1:
+        if matriz.size != 25:
+            raise ValueError(f"El vector tiene tamaño {matriz.size}, pero se esperaba 25 (5x5)")
+        matriz = matriz.reshape((5, 5))
+
+    cmap = ListedColormap(["white", "#002366"])
+    data = (matriz + 1) // 2
+
+    fig, ax = plt.subplots()
+    ax.matshow(data, cmap=cmap)
+
+    n, m = matriz.shape
+    ax.set_xticks(np.arange(-0.5, m, 1))
+    ax.set_yticks(np.arange(-0.5, n, 1))
+    ax.grid(color='black', linewidth=0.8)
+
+    ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+
+    plt.show()
+
+def get_noisy_patterns(patrones: np.ndarray, noise: float) -> np.ndarray:
+    if not (0 <= noise <= 1):
+        raise ValueError("El parámetro 'noise' debe estar entre 0 y 1.")
+
+    noisy = patrones.copy()
+
+    num_patrones, num_neuronas = noisy.shape
+    num_ruido = int(noise * num_neuronas)  # cantidad de bits a invertir por patrón
+
+    for i in range(num_patrones):
+        # Elegimos al azar qué posiciones invertir
+        idxs = np.random.choice(num_neuronas, num_ruido, replace=False)
+        noisy[i, idxs] *= -1
+
+    return noisy
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Unsupervised Learning.')
-    parser.add_argument('--config-file', type=str, default="./config/kohonen/config.json", help='Path to the configuration JSON file.')
+    parser.add_argument('--config-file', type=str, default="./config/kohonen/config.json",
+                        help='Path to the configuration JSON file.')
+    parser.add_argument('--letras-file', type=str, default="./data/letras.txt",
+                        help='Path to the text file that contains the patters to save on the Hopfield network.')
+    parser.add_argument('--noise', type=float, default=0.2,
+                        help='Noise for Hopfield network.')
     parser_args = parser.parse_args()
 
     with open(parser_args.config_file, 'r') as file:
@@ -246,12 +315,19 @@ if __name__ == "__main__":
     elif algorithm == "pca_sklearn":
         var_names = df.drop('Country', axis=1).columns.tolist()
         run_pca_sklearn(standardization_data_input, num_variables_data, countries=countries_data, var_names=var_names)
-    elif algorithm == "hopfield": #TODO: esto es solo para testear hopfield, hay que implementar el ej del tp
-        hopfield = Hopfield(np.array([
-            [1, 1, -1, -1],
-            [-1, -1, 1 ,1]
-        ]))
+    elif algorithm == "hopfield":
+        letras = cargar_letras_numpy(parser_args.letras_file)
+        noise = parser_args.noise
+        letras_seleccionadas = ['A', 'L', 'T', 'V']  #TODO: hacer el analisis de cuales son las mejores letras como hicieron en clase
+        patrones = [letras[letra].flatten() for letra in letras_seleccionadas]
+        # Convertimos la lista en un ndarray 2D: cada fila = un patrón
+        matriz_patrones = np.array(patrones)
+        hopfield = Hopfield(matriz_patrones)
         hopfield.print_weights()
-        hopfield.train(np.array([1, -1, -1, -1]))
+        noisy_patterns = get_noisy_patterns(matriz_patrones, noise)
+        recovered_patterns = hopfield.evaluate_multiple_patterns(noisy_patterns)
+        for pattern in recovered_patterns:
+            plot_letra(pattern)
+
     else:
         raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kohonen', 'oja', 'pca_manual', or 'pca_sklearn'.")

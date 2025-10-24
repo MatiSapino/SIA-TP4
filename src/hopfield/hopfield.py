@@ -17,7 +17,7 @@ class Hopfield:
         self.neurons = np.zeros(self.data.shape[1])
 
     #Dado un patron ζ nuevo, devuelve el patron ξ almacenado mas parecido
-    def train(self, pattern: np.ndarray) -> np.ndarray:
+    def evaluate(self, pattern: np.ndarray) -> np.ndarray:
         self.neurons = pattern.copy()
         prev_state = np.zeros_like(self.neurons)
         prev_prev_state = np.zeros_like(self.neurons)
@@ -33,6 +33,13 @@ class Hopfield:
             iteration += 1
 
         return self.neurons
+
+    def evaluate_multiple_patterns(self, patterns: np.ndarray) -> np.ndarray:
+        results = []
+        for pattern in patterns:
+            result = self.evaluate(pattern)
+            results.append(result)
+        return np.array(results)
 
     def print_weights(self):
         print(self.weights)
