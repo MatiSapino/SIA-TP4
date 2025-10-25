@@ -20,7 +20,7 @@ class Hopfield:
         self.neurons = np.zeros(self.data.shape[1])
 
     #Dado un patron ζ nuevo, devuelve el patron ξ almacenado mas parecido
-    def evaluate(self, pattern: np.ndarray, calculate_energy: bool = False) -> Tuple[np.ndarray, List[int]]:
+    def evaluate(self, pattern: np.ndarray, calculate_energy: bool = False) -> Tuple[np.ndarray, List[float]]:
         self.neurons = pattern.copy()
         prev_state = np.zeros_like(self.neurons)
         prev_prev_state = np.zeros_like(self.neurons)
@@ -57,4 +57,4 @@ class Hopfield:
         for i in range(len(self.neurons)):
             for j in range(i+1, len(self.neurons)):
                 energy += self.weights[i, j] * self.neurons[i] * self.neurons[j]
-        return energy
+        return -energy
