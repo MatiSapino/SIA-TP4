@@ -288,6 +288,8 @@ if __name__ == "__main__":
                         help='Path to the text file that contains the patters to save on the Hopfield network.')
     parser.add_argument('--noise', type=float, default=0.2,
                         help='Noise for Hopfield network.')
+    parser.add_argument('--energy', type=bool, default=True,
+                        help='Calculate energy for Hopfield network.')
     parser_args = parser.parse_args()
 
     with open(parser_args.config_file, 'r') as file:
@@ -318,6 +320,7 @@ if __name__ == "__main__":
     elif algorithm == "hopfield":
         letras = cargar_letras_numpy(parser_args.letras_file)
         noise = parser_args.noise
+        calculate_energy = parser_args.energy
         letras_seleccionadas = ['A', 'L', 'T', 'V']  #TODO: hacer el analisis de cuales son las mejores letras como hicieron en clase
         patrones = [letras[letra].flatten() for letra in letras_seleccionadas]
         # Convertimos la lista en un ndarray 2D: cada fila = un patrón
@@ -325,9 +328,11 @@ if __name__ == "__main__":
         hopfield = Hopfield(matriz_patrones)
         hopfield.print_weights()
         noisy_patterns = get_noisy_patterns(matriz_patrones, noise)
-        recovered_patterns = hopfield.evaluate_multiple_patterns(noisy_patterns)
+        recovered_patterns, patterns_energy = hopfield.evaluate_multiple_patterns(noisy_patterns, calculate_energy)
         for pattern in recovered_patterns:
             plot_letra(pattern)
+        for energy in patterns_energy:
+            print(energy)
 
     else:
         raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kohonen', 'oja', 'pca_manual', or 'pca_sklearn'.")
