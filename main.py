@@ -5,8 +5,8 @@ import pandas as pd
 import os
 import json as _json
 import matplotlib.pyplot as plt
+import textwrap
 from matplotlib.colors import ListedColormap
-
 from matplotlib import cm
 
 from src.hopfield.hopfield import Hopfield
@@ -64,6 +64,42 @@ def _create_index_plot(pc_scores, countries, output_dir):
     plt.close(fig)
     return index_path
 
+def _plot_country_map(kohonen, countries, neuron_assignments):
+    grid_size = kohonen.grid_size
+    fig, ax = plt.subplots(figsize=(grid_size, grid_size))
+
+    cell_text = [["" for _ in range(grid_size)] for _ in range(grid_size)]
+    counts = np.zeros((grid_size, grid_size))
+
+    for country, bmu_index in zip(countries, neuron_assignments):
+        x = bmu_index // grid_size
+        y = bmu_index % grid_size
+        counts[x, y] += 1
+        if cell_text[x][y]:
+            cell_text[x][y] += f", {country}"
+        else:
+            cell_text[x][y] = country
+
+    cmap = plt.cm.get_cmap("YlGnBu")
+    img = ax.imshow(counts, cmap=cmap, alpha=0.4)
+
+    for i in range(grid_size):
+        for j in range(grid_size):
+            if cell_text[i][j]:
+                wrapped = "\n".join(textwrap.wrap(cell_text[i][j], width=15))
+                ax.text(j, i, wrapped, ha='center', va='center', fontsize=7, color='black')
+
+    ax.set_xticks(np.arange(grid_size))
+    ax.set_yticks(np.arange(grid_size))
+    ax.set_xticklabels(range(grid_size))
+    ax.set_yticklabels(range(grid_size))
+    ax.set_title("Kohonen - Country Assigment", fontsize=14, pad=10)
+    ax.set_xlabel("Y")
+    ax.set_ylabel("X")
+    plt.gca().invert_yaxis()
+    plt.colorbar(img, ax=ax, label="Total countries assigned")
+    plt.tight_layout()
+    plt.show()
 
 def run_kohonen(config, standardization_data, countries, num_variables_data):
     epochs_factor = config['epochs_factor']
@@ -104,6 +140,7 @@ def run_kohonen(config, standardization_data, countries, num_variables_data):
     for bmu_index, country_list in country_map.items():
         print(f"Neuron {bmu_index}: {', '.join(country_list)}")
 
+    _plot_country_map(kohonen, countries, neuron_assignments)
 
 def run_pca_manual(standardization_data):
     print("--- PCA (Manual) ---")
@@ -262,9 +299,6 @@ def select_most_orthogonal_letters(letras: dict, group_size: int = 4):
             best_group = g
             best_matrix = orto_matrix.copy()
     return best_group, best_score, best_matrix
-
-
-
 
 
 def plot_letra(matriz: np.ndarray):
