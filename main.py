@@ -239,6 +239,30 @@ def cargar_letras_numpy(ruta_archivo: str):
 
     return letras
 
+# Selects the most orthogonal group of 4 letters (least similar patterns)
+import itertools
+def select_most_orthogonal_letters(letras: dict, group_size: int = 4):
+    """
+    Given a dict of letter:matrix, select the group of 'group_size' letters whose flattened patterns are most close to orthogonal (least similar).
+    Returns the best group and its average dot product.
+    """
+    flat_letters = {k: m.flatten() for k, m in letras.items()}
+    all_groups = itertools.combinations(flat_letters.keys(), r=group_size)
+    best_group = None
+    best_score = float('inf')
+    best_matrix = None
+    for g in all_groups:
+        group = np.array([v for k, v in flat_letters.items() if k in g])
+        orto_matrix = group.dot(group.T)
+        np.fill_diagonal(orto_matrix, 0)
+        row, _ = orto_matrix.shape
+        avg_dot = np.abs(orto_matrix).sum() / (orto_matrix.size - row)
+        if avg_dot < best_score:
+            best_score = avg_dot
+            best_group = g
+            best_matrix = orto_matrix.copy()
+    return best_group, best_score, best_matrix
+
 
 
 
@@ -321,7 +345,10 @@ if __name__ == "__main__":
         letras = cargar_letras_numpy(parser_args.letras_file)
         noise = parser_args.noise
         calculate_energy = parser_args.energy
-        letras_seleccionadas = ['A', 'L', 'T', 'V']  #TODO: hacer el analisis de cuales son las mejores letras como hicieron en clase
+        # Select the most orthogonal group of 4 letters
+        best_group, best_score, best_matrix = select_most_orthogonal_letters(letras, group_size=4)
+        print(f"Best group of 4 most orthogonal letters: {best_group}\nAverage dot product: {best_score:.3f}\nDot product matrix:\n{best_matrix}")
+        letras_seleccionadas = list(best_group)
         patrones = [letras[letra].flatten() for letra in letras_seleccionadas]
         # Convertimos la lista en un ndarray 2D: cada fila = un patrón
         matriz_patrones = np.array(patrones)
