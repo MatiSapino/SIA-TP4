@@ -5,7 +5,7 @@ import pandas as pd
 import os
 import json as _json
 import matplotlib.pyplot as plt
-import seaborn as sns
+import textwrap
 from matplotlib.colors import ListedColormap
 from matplotlib import cm
 
@@ -66,30 +66,38 @@ def _create_index_plot(pc_scores, countries, output_dir):
 
 def _plot_country_map(kohonen, countries, neuron_assignments):
     grid_size = kohonen.grid_size
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(grid_size, grid_size))
 
-    cell_texts = [['' for _ in range(grid_size)] for _ in range(grid_size)]
+    cell_text = [["" for _ in range(grid_size)] for _ in range(grid_size)]
+    counts = np.zeros((grid_size, grid_size))
 
-    for country, neuron_idx in zip(countries, neuron_assignments):
-        x, y = kohonen.neuron_coords[neuron_idx]
-        if cell_texts[x][y]:
-            cell_texts[x][y] += f", {country}"
+    for country, bmu_index in zip(countries, neuron_assignments):
+        x = bmu_index // grid_size
+        y = bmu_index % grid_size
+        counts[x, y] += 1
+        if cell_text[x][y]:
+            cell_text[x][y] += f", {country}"
         else:
-            cell_texts[x][y] = country
+            cell_text[x][y] = country
 
-    ax.set_xlim(-0.5, grid_size - 0.5)
-    ax.set_ylim(-0.5, grid_size - 0.5)
-    ax.set_xticks(range(grid_size))
-    ax.set_yticks(range(grid_size))
-    ax.grid(True, color='gray', linestyle='--', alpha=0.5)
+    cmap = plt.cm.get_cmap("YlGnBu")
+    img = ax.imshow(counts, cmap=cmap, alpha=0.4)
 
     for i in range(grid_size):
         for j in range(grid_size):
-            if cell_texts[i][j]:
-                ax.text(j, grid_size - 1 - i, cell_texts[i][j],
-                        ha='center', va='center', fontsize=8, wrap=True)
+            if cell_text[i][j]:
+                wrapped = "\n".join(textwrap.wrap(cell_text[i][j], width=15))
+                ax.text(j, i, wrapped, ha='center', va='center', fontsize=7, color='black')
 
-    ax.set_title("Kohonen Map - Countries per Neuron")
+    ax.set_xticks(np.arange(grid_size))
+    ax.set_yticks(np.arange(grid_size))
+    ax.set_xticklabels(range(grid_size))
+    ax.set_yticklabels(range(grid_size))
+    ax.set_title("Kohonen - Country Assigment", fontsize=14, pad=10)
+    ax.set_xlabel("Y")
+    ax.set_ylabel("X")
+    plt.gca().invert_yaxis()
+    plt.colorbar(img, ax=ax, label="Total countries assigned")
     plt.tight_layout()
     plt.show()
 
@@ -267,9 +275,6 @@ def cargar_letras_numpy(ruta_archivo: str):
             i += 6  # letra + 5 filas
 
     return letras
-
-
-
 
 
 def plot_letra(matriz: np.ndarray):
