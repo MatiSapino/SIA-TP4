@@ -75,7 +75,7 @@ class Kohonen:
 
                 self.activations[x, y] += 1
 
-                if epoch > 25 and country_labels is not None:
+                if epoch > 1 and country_labels is not None:
                     country = country_labels[idx]
                     self.country_activations[(x, y)][country] += 1
 

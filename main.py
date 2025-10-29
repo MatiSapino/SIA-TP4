@@ -182,7 +182,6 @@ def plot_activation_map(kohonen, countries=None):
     plt.tight_layout()
     plt.show()
 
-
 def plot_variable_heatmaps(kohonen, variable_names, countries=None):
     k = kohonen.grid_size
     num_vars = kohonen.input_dim
@@ -218,25 +217,23 @@ def plot_average_variable_maps(kohonen, variable_names, countries, original_df):
     num_vars = kohonen.input_dim
     cmap = plt.get_cmap('magma')
 
+    label_map = _build_country_label_map(kohonen, countries)
     country_to_idx = {country: i for i, country in enumerate(countries)}
 
     for var_idx, var_name in enumerate(variable_names):
         avg_values = np.zeros((k, k))
-        label_dict = [[{} for _ in range(k)] for _ in range(k)]
 
         for i in range(k):
             for j in range(k):
-                activations = kohonen.country_activations.get((i, j), {})
-                total = sum(activations.values())
-
-                if total > 0:
-                    sum_val = 0
-                    for country, count in activations.items():
+                countries_in_cell = label_map[i][j].split("\n") if label_map[i][j] else []
+                if countries_in_cell:
+                    values = []
+                    for country in countries_in_cell:
                         if country in country_to_idx:
                             value = original_df.iloc[country_to_idx[country]][var_name]
-                            sum_val += value * count
-                            label_dict[i][j][country] = count
-                    avg_values[i, j] = sum_val / total
+                            values.append(value)
+                    if values:
+                        avg_values[i, j] = np.mean(values)
 
         norm = plt.Normalize(vmin=np.nanmin(avg_values), vmax=np.nanmax(avg_values))
 
@@ -248,17 +245,13 @@ def plot_average_variable_maps(kohonen, variable_names, countries, original_df):
 
         for i in range(k):
             for j in range(k):
-                labels_in_cell = label_dict[i][j]
-                if labels_in_cell:
-                    sorted_labels = sorted(labels_in_cell.items(), key=lambda x: -x[1])
-                    text = "\n".join(label for label, _ in sorted_labels)
-
+                if label_map[i][j]:
                     rgba = cmap(norm(avg_values[i, j]))
                     r, g, b, _ = rgba
                     luminance = 0.299 * r + 0.587 * g + 0.114 * b
                     text_color = 'black' if luminance > 0.5 else 'white'
 
-                    ax.text(j + 0.5, i + 0.5, text,
+                    ax.text(j + 0.5, i + 0.5, label_map[i][j],
                             ha='center', va='center', color=text_color, fontsize=8)
 
         plt.title(f"Average {var_name} per neuron")
