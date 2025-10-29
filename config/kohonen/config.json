@@ -1,8 +1,8 @@
 {
   "algorithm": "kohonen",
   "csv_file": "./data/europe.csv",
-  "epochs_factor": 2,
-  "r": 7,
+  "epochs_factor": 500,
+  "r": 49,
   "r_constant": false,
   "k": 7,
   "similarity_metric": "euclidean"

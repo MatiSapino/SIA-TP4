@@ -65,7 +65,7 @@ def _create_index_plot(pc_scores, countries, output_dir):
     return index_path
 
 
-def run_kohonen(config, standardization_data, countries):
+def run_kohonen(config, standardization_data, countries, num_variables_data):
     epochs_factor = config['epochs_factor']
     radio = config['r']
     radio_constant = config['r_constant']
@@ -75,7 +75,7 @@ def run_kohonen(config, standardization_data, countries):
         raise ValueError('Only euclidean or exponential are supported.')
 
     neurons = grid_size * grid_size
-    epochs = epochs_factor * neurons
+    epochs = epochs_factor * num_variables_data
 
     kohonen = Kohonen(
         data=standardization_data,
@@ -309,7 +309,7 @@ if __name__ == "__main__":
 
     algorithm = config_data["algorithm"]
     if algorithm == "kohonen":
-        run_kohonen(config_data, standardization_data_input, countries_data)
+        run_kohonen(config_data, standardization_data_input, countries_data, num_variables_data)
     elif algorithm == "oja":
         run_oja(config_data, standardization_data_input, num_variables_data)
     elif algorithm == "pca_manual":
