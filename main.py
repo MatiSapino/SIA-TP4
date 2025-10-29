@@ -5,7 +5,7 @@ import pandas as pd
 import os
 import json as _json
 import matplotlib.pyplot as plt
-import textwrap
+import seaborn as sns
 from matplotlib.colors import ListedColormap
 from matplotlib import cm
 
@@ -15,7 +15,7 @@ from src.oja.oja import Oja
 from src.standardization.standardization import Standardization
 from src.pca.pca import Pca
 from sklearn.decomposition import PCA
-
+from collections import defaultdict
 
 def _create_biplot(components, pc_scores, countries, output_dir, var_names=None):
     """Create and save a biplot (PC2 vs PC1) with variable vectors and country labels."""
@@ -62,46 +62,212 @@ def _create_index_plot(pc_scores, countries, output_dir):
     index_path = os.path.join(output_dir, 'pca_index_plot.png')
     fig.savefig(index_path, dpi=200)
     plt.close(fig)
-    return index_path
 
-def _plot_country_map(kohonen, countries, neuron_assignments):
-    grid_size = kohonen.grid_size
-    fig, ax = plt.subplots(figsize=(grid_size, grid_size))
+def plot_country_activation_heatmap(kohonen):
+    k = kohonen.grid_size
+    counts = kohonen.activations
+    country_activations = kohonen.country_activations
 
-    cell_text = [["" for _ in range(grid_size)] for _ in range(grid_size)]
-    counts = np.zeros((grid_size, grid_size))
+    plt.figure(figsize=(10, 10))
+    cmap = plt.get_cmap('viridis')
+    norm = plt.Normalize(vmin=counts.min(), vmax=counts.max())
 
-    for country, bmu_index in zip(countries, neuron_assignments):
-        x = bmu_index // grid_size
-        y = bmu_index % grid_size
-        counts[x, y] += 1
-        if cell_text[x][y]:
-            cell_text[x][y] += f", {country}"
-        else:
-            cell_text[x][y] = country
+    ax = sns.heatmap(
+        counts, annot=False, cmap=cmap, norm=norm,
+        cbar_kws={"label": "Total activations"}
+    )
 
-    cmap = plt.cm.get_cmap("YlGnBu")
-    img = ax.imshow(counts, cmap=cmap, alpha=0.4)
+    for i in range(k):
+        for j in range(k):
+            countries = country_activations.get((i, j), {})
+            if countries:
+                sorted_countries = sorted(countries.items(), key=lambda x: -x[1])
+                text = "\n".join(f"{name} ({cnt})" for name, cnt in sorted_countries)
 
-    for i in range(grid_size):
-        for j in range(grid_size):
-            if cell_text[i][j]:
-                wrapped = "\n".join(textwrap.wrap(cell_text[i][j], width=15))
-                ax.text(j, i, wrapped, ha='center', va='center', fontsize=7, color='black')
+                # Adjust text color based on background brightness
+                rgba = cmap(norm(counts[i, j]))
+                r, g, b, _ = rgba
+                luminance = 0.299*r + 0.587*g + 0.114*b
+                text_color = 'black' if luminance > 0.5 else 'white'
 
-    ax.set_xticks(np.arange(grid_size))
-    ax.set_yticks(np.arange(grid_size))
-    ax.set_xticklabels(range(grid_size))
-    ax.set_yticklabels(range(grid_size))
-    ax.set_title("Kohonen - Country Assigment", fontsize=14, pad=10)
-    ax.set_xlabel("Y")
-    ax.set_ylabel("X")
-    plt.gca().invert_yaxis()
-    plt.colorbar(img, ax=ax, label="Total countries assigned")
+                ax.text(j + 0.5, i + 0.5, text,
+                        ha='center', va='center', color=text_color, fontsize=8)
+
+    plt.title("Country activations per neuron", fontsize=14)
+    plt.xlabel("Y index")
+    plt.ylabel("X index")
     plt.tight_layout()
     plt.show()
 
-def run_kohonen(config, standardization_data, countries, num_variables_data):
+def _build_country_label_map(kohonen, countries):
+    k = kohonen.grid_size
+    assignments = kohonen.get_bmus_for_data(kohonen.data)
+    label_map = [["" for _ in range(k)] for _ in range(k)]
+    for country, idx in zip(countries, assignments):
+        i, j = divmod(idx, k)
+        if label_map[i][j]:
+            label_map[i][j] += f"\n{country}"
+        else:
+            label_map[i][j] = country
+    return label_map
+
+
+def plot_avg_euclidean_distance(kohonen, countries=None):
+    k = kohonen.grid_size
+    dist_matrix = np.zeros((k, k))
+    weights = kohonen.weights.reshape(k, k, -1)
+
+    # Calcular distancia promedio a los vecinos
+    for i in range(k):
+        for j in range(k):
+            neighbors = []
+            for di in [-1, 0, 1]:
+                for dj in [-1, 0, 1]:
+                    ni, nj = i + di, j + dj
+                    if 0 <= ni < k and 0 <= nj < k and (ni, nj) != (i, j):
+                        neighbors.append(weights[ni, nj])
+            if neighbors:
+                dists = [np.linalg.norm(weights[i, j] - n) for n in neighbors]
+                dist_matrix[i, j] = np.mean(dists)
+
+    plt.figure(figsize=(8, 6))
+    cmap = plt.get_cmap("cividis")
+    ax = sns.heatmap(dist_matrix, cmap=cmap, cbar_kws={"label": "Average distance"})
+
+    # Mostrar países sobre cada neurona
+    if countries is not None:
+        label_map = _build_country_label_map(kohonen, countries)
+        norm = plt.Normalize(vmin=dist_matrix.min(), vmax=dist_matrix.max())
+        for i in range(k):
+            for j in range(k):
+                if label_map[i][j]:
+                    rgba = cmap(norm(dist_matrix[i, j]))
+                    r, g, b, _ = rgba
+                    luminance = 0.299*r + 0.587*g + 0.114*b
+                    text_color = 'black' if luminance > 0.5 else 'white'
+                    ax.text(j + 0.5, i + 0.5, label_map[i][j],
+                            ha='center', va='center', color=text_color, fontsize=7)
+
+    plt.title("Average Euclidean distance between neurons", fontsize=14)
+    plt.xlabel("Y index")
+    plt.ylabel("X index")
+    plt.tight_layout()
+    plt.show()
+
+def plot_activation_map(kohonen, countries=None):
+    k = kohonen.grid_size
+    activations = kohonen.activations
+
+    plt.figure(figsize=(8, 6))
+    cmap = plt.get_cmap("magma")
+    ax = sns.heatmap(activations, annot=False, cmap=cmap,
+                     cbar_kws={"label": "Number of activations"})
+
+    if countries is not None:
+        label_map = _build_country_label_map(kohonen, countries)
+        norm = plt.Normalize(vmin=activations.min(), vmax=activations.max())
+        for i in range(k):
+            for j in range(k):
+                if label_map[i][j]:
+                    rgba = cmap(norm(activations[i, j]))
+                    r, g, b, _ = rgba
+                    luminance = 0.299*r + 0.587*g + 0.114*b
+                    text_color = 'black' if luminance > 0.5 else 'white'
+                    ax.text(j + 0.5, i + 0.5, label_map[i][j],
+                            ha='center', va='center', color=text_color, fontsize=7)
+
+    plt.title("Neuron activation map", fontsize=14)
+    plt.xlabel("Y index")
+    plt.ylabel("X index")
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_variable_heatmaps(kohonen, variable_names, countries=None):
+    k = kohonen.grid_size
+    num_vars = kohonen.input_dim
+    weights = kohonen.weights.reshape(k, k, num_vars)
+    cmap = plt.get_cmap("coolwarm")
+
+    for idx, var_name in enumerate(variable_names):
+        plt.figure(figsize=(8, 6))
+        heatmap = weights[:, :, idx]
+        ax = sns.heatmap(heatmap, cmap=cmap, cbar_kws={"label": var_name})
+
+        if countries is not None:
+            label_map = _build_country_label_map(kohonen, countries)
+            norm = plt.Normalize(vmin=heatmap.min(), vmax=heatmap.max())
+            for i in range(k):
+                for j in range(k):
+                    if label_map[i][j]:
+                        rgba = cmap(norm(heatmap[i, j]))
+                        r, g, b, _ = rgba
+                        luminance = 0.299*r + 0.587*g + 0.114*b
+                        text_color = 'black' if luminance > 0.5 else 'white'
+                        ax.text(j + 0.5, i + 0.5, label_map[i][j],
+                                ha='center', va='center', color=text_color, fontsize=7)
+
+        plt.title(f"{var_name} distribution across neurons", fontsize=14)
+        plt.xlabel("Y index")
+        plt.ylabel("X index")
+        plt.tight_layout()
+        plt.show()
+
+def plot_average_variable_maps(kohonen, variable_names, countries, original_df):
+    k = kohonen.grid_size
+    num_vars = kohonen.input_dim
+    cmap = plt.get_cmap('magma')
+
+    country_to_idx = {country: i for i, country in enumerate(countries)}
+
+    for var_idx, var_name in enumerate(variable_names):
+        avg_values = np.zeros((k, k))
+        label_dict = [[{} for _ in range(k)] for _ in range(k)]
+
+        for i in range(k):
+            for j in range(k):
+                activations = kohonen.country_activations.get((i, j), {})
+                total = sum(activations.values())
+
+                if total > 0:
+                    sum_val = 0
+                    for country, count in activations.items():
+                        if country in country_to_idx:
+                            value = original_df.iloc[country_to_idx[country]][var_name]
+                            sum_val += value * count
+                            label_dict[i][j][country] = count
+                    avg_values[i, j] = sum_val / total
+
+        norm = plt.Normalize(vmin=np.nanmin(avg_values), vmax=np.nanmax(avg_values))
+
+        plt.figure(figsize=(8, 6))
+        ax = sns.heatmap(
+            avg_values, annot=False, cmap=cmap,
+            cbar_kws={"label": f"Average {var_name}"}
+        )
+
+        for i in range(k):
+            for j in range(k):
+                labels_in_cell = label_dict[i][j]
+                if labels_in_cell:
+                    sorted_labels = sorted(labels_in_cell.items(), key=lambda x: -x[1])
+                    text = "\n".join(label for label, _ in sorted_labels)
+
+                    rgba = cmap(norm(avg_values[i, j]))
+                    r, g, b, _ = rgba
+                    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+                    text_color = 'black' if luminance > 0.5 else 'white'
+
+                    ax.text(j + 0.5, i + 0.5, text,
+                            ha='center', va='center', color=text_color, fontsize=8)
+
+        plt.title(f"Average {var_name} per neuron")
+        plt.xlabel("Y index")
+        plt.ylabel("X index")
+        plt.tight_layout()
+        plt.show()
+
+def run_kohonen(config, standardization_data, countries, num_variables_data, plot=False):
     epochs_factor = config['epochs_factor']
     radio = config['r']
     radio_constant = config['r_constant']
@@ -122,7 +288,7 @@ def run_kohonen(config, standardization_data, countries, num_variables_data):
         radio_constant=radio_constant,
         similarity_metric=similarity_metric
     )
-    kohonen.train()
+    kohonen.train(country_labels=countries)
 
     print("\n--- Analyzing Country-to-Neuron Assignment ---")
     neuron_assignments = kohonen.get_bmus_for_data(standardization_data)
@@ -140,7 +306,18 @@ def run_kohonen(config, standardization_data, countries, num_variables_data):
     for bmu_index, country_list in country_map.items():
         print(f"Neuron {bmu_index}: {', '.join(country_list)}")
 
-    _plot_country_map(kohonen, countries, neuron_assignments)
+    if plot:
+        variable_names = ["Area", "GDP", "Inflation", "Life Expectancy", "Military Expense", "People Growth", "Unemployment"]
+        plot_country_activation_heatmap(kohonen)
+        plot_activation_map(kohonen, countries)
+        plot_avg_euclidean_distance(kohonen, countries)
+        plot_variable_heatmaps(kohonen, variable_names, countries)
+        plot_average_variable_maps(
+            kohonen,
+            variable_names=variable_names,
+            countries=countries,
+            original_df=df
+        )
 
 def run_pca_manual(standardization_data):
     print("--- PCA (Manual) ---")
@@ -348,6 +525,8 @@ if __name__ == "__main__":
                         help='Noise for Hopfield network.')
     parser.add_argument('--energy', type=bool, default=True,
                         help='Calculate energy for Hopfield network.')
+    parser.add_argument('--plot', type=bool, default=False,
+                        help='Plot results.')
     parser_args = parser.parse_args()
 
     with open(parser_args.config_file, 'r') as file:
@@ -367,7 +546,7 @@ if __name__ == "__main__":
 
     algorithm = config_data["algorithm"]
     if algorithm == "kohonen":
-        run_kohonen(config_data, standardization_data_input, countries_data, num_variables_data)
+        run_kohonen(config_data, standardization_data_input, countries_data, num_variables_data, plot=parser_args.plot)
     elif algorithm == "oja":
         run_oja(config_data, standardization_data_input, num_variables_data)
     elif algorithm == "pca_manual":

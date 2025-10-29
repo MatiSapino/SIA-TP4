@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 
 EUCLIDEAN = 'euclidean'
 EXPONENTIAL = 'exponential'
@@ -17,6 +18,8 @@ class Kohonen:
         self.similarity_metric = similarity_metric
         self.neuron_coords = self._get_neuron_coordinates()
         self.weights = self._initialize_weights()
+        self.activations = np.zeros((self.grid_size, self.grid_size), dtype=int)
+        self.country_activations = defaultdict(lambda: defaultdict(int))
 
     def _get_neuron_coordinates(self) -> np.ndarray:
         return np.array(np.mgrid[:self.grid_size, :self.grid_size].T.reshape(self.neurons, 2))
@@ -58,23 +61,25 @@ class Kohonen:
         update = learning_rate_factor[:, np.newaxis] * correction_term
         self.weights += update
 
-    def train(self):
-        print(f"--- Starting Training ---")
-        print(f"Map: {self.grid_size} x {self.grid_size}. Epochs: {self.epochs}")
-        print(f"Weights initialized with random examples of the dataset")
+    def train(self, country_labels=None):
 
         for epoch in range(self.epochs):
             self._update_learning_params(epoch)
+            indices = np.arange(self.num_records)
+            np.random.shuffle(indices)
 
-            np.random.shuffle(self.data)
-
-            for pattern in self.data:
+            for idx in indices:
+                pattern = self.data[idx]
                 bmu_index = self._get_bmu_index(pattern)
+                x, y = divmod(bmu_index, self.grid_size)
+
+                self.activations[x, y] += 1
+
+                if epoch > 25 and country_labels is not None:
+                    country = country_labels[idx]
+                    self.country_activations[(x, y)][country] += 1
+
                 self._update_weight(pattern, bmu_index)
-
-            print(f"Epoch: {epoch}, Radio = {self.radio}, Current Learning Rate = {self.learning_rate:.4f}")
-
-        print(f"--- Finished Training ---")
 
     def get_bmus_for_data(self, data: np.ndarray) -> np.ndarray:
         num_records = data.shape[0]

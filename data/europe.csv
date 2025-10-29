@@ -1,4 +1,4 @@
-"Country","Area","GDP","Inflation","Life.expect","Military","Pop.growth","Unemployment"
+"Country","Area","GDP","Inflation","Life Expectancy","Military Expense","People Growth","Unemployment"
 "Austria",83871,41600,3.5,79.91,0.8,0.03,4.2
 "Belgium",30528,37800,3.5,79.65,1.3,0.06,7.2
 "Bulgaria",110879,13800,4.2,73.84,2.6,-0.8,9.6
