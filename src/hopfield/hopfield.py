@@ -19,14 +19,16 @@ class Hopfield:
         self.weights = _initialize_weights(self.data)
         self.neurons = np.zeros(self.data.shape[1])
 
-    #Dado un patron ζ nuevo, devuelve el patron ξ almacenado mas parecido
-    def evaluate(self, pattern: np.ndarray, calculate_energy: bool = False) -> Tuple[np.ndarray, List[float]]:
+    #Dado un patron ζ nuevo, devuelve el patron ξ almacenado mas parecido, la energia de cada estado y los estados de cada paso
+    def evaluate(self, pattern: np.ndarray, calculate_energy: bool = False) -> Tuple[np.ndarray, List[float], List[np.ndarray]]:
         self.neurons = pattern.copy()
         prev_state = np.zeros_like(self.neurons)
         prev_prev_state = np.zeros_like(self.neurons)
         energy_per_iteration = []
+        neurons_per_iteration = []
         iteration = 0
         while not np.array_equal(prev_state, self.neurons) and not np.array_equal(prev_prev_state, self.neurons):
+            neurons_per_iteration.append(self.neurons)
             if calculate_energy:
                 energy_per_iteration.append(self.energy())
             prev_prev_state = prev_state.copy()
@@ -38,16 +40,19 @@ class Hopfield:
                     self.neurons[i] = prev_state[i]
             iteration += 1
 
-        return self.neurons , energy_per_iteration
+        return self.neurons , energy_per_iteration, neurons_per_iteration
 
-    def evaluate_multiple_patterns(self, patterns: np.ndarray, calculate_energy: bool) -> Tuple[np.ndarray, List[float]]:
+    def evaluate_multiple_patterns(self, patterns: np.ndarray, calculate_energy: bool) \
+            -> Tuple[np.ndarray, List[List[float]], List[List[np.ndarray]]]:
         results = []
         pattern_energy = []
+        pattern_neurons = []
         for pattern in patterns:
-            result, energy = self.evaluate(pattern, calculate_energy)
+            result, energy, history = self.evaluate(pattern, calculate_energy)
             results.append(result)
             pattern_energy.append(energy)
-        return np.array(results), pattern_energy
+            pattern_neurons.append(history)
+        return np.array(results), pattern_energy, pattern_neurons
 
     def print_weights(self):
         print(self.weights)

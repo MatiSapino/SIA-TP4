@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import numpy as np
 import pandas as pd
@@ -471,7 +472,7 @@ def select_most_orthogonal_letters(letras: dict, group_size: int = 4):
     return best_group, best_score, best_matrix
 
 
-def plot_letra(matriz: np.ndarray):
+def save_letter_plot(matriz: np.ndarray, nombre_archivo: str):
     if matriz.ndim == 1:
         if matriz.size != 25:
             raise ValueError(f"El vector tiene tamaño {matriz.size}, pero se esperaba 25 (5x5)")
@@ -490,7 +491,8 @@ def plot_letra(matriz: np.ndarray):
 
     ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
 
-    plt.show()
+    plt.savefig(nombre_archivo, bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
 
 def get_noisy_patterns(patrones: np.ndarray, noise: float) -> np.ndarray:
     if not (0 <= noise <= 1):
@@ -561,11 +563,23 @@ if __name__ == "__main__":
         hopfield = Hopfield(matriz_patrones)
         hopfield.print_weights()
         noisy_patterns = get_noisy_patterns(matriz_patrones, noise)
-        recovered_patterns, patterns_energy = hopfield.evaluate_multiple_patterns(noisy_patterns, calculate_energy)
-        for pattern in recovered_patterns:
-            plot_letra(pattern)
-        for energy in patterns_energy:
-            print(energy)
+        recovered_patterns, patterns_energy, patterns_state_history = hopfield.evaluate_multiple_patterns(noisy_patterns, calculate_energy)
+        results_dir = f"./results/noise_{noise}"
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+        with open(os.path.join(results_dir, f"energia_ruido_{noise}.csv"), mode="w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["patron", "iteracion", "energia"])
+
+            for i, (neuron_history, energy_history) in enumerate(zip(patterns_state_history, patterns_energy)):
+                print(f"\n=== Patrón {i} ===")
+                for step, (state, energy) in enumerate(zip(neuron_history, energy_history)):
+                    print(f" Iteración {step}: estado = {state}, energía = {energy:.4f}")
+                    save_letter_plot(state, f"./results/noise_{noise}/patron_{i}_ruido_{noise}_iter_{step}.png")
+                    writer.writerow([i, step, energy])
+
+
+
 
     else:
         raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kohonen', 'oja', 'pca_manual', or 'pca_sklearn'.")
