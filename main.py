@@ -5,8 +5,8 @@ import pandas as pd
 import os
 import json as _json
 import matplotlib.pyplot as plt
+import seaborn as sns
 from matplotlib.colors import ListedColormap
-
 from matplotlib import cm
 
 from src.hopfield.hopfield import Hopfield
@@ -64,6 +64,34 @@ def _create_index_plot(pc_scores, countries, output_dir):
     plt.close(fig)
     return index_path
 
+def _plot_country_map(kohonen, countries, neuron_assignments):
+    grid_size = kohonen.grid_size
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    cell_texts = [['' for _ in range(grid_size)] for _ in range(grid_size)]
+
+    for country, neuron_idx in zip(countries, neuron_assignments):
+        x, y = kohonen.neuron_coords[neuron_idx]
+        if cell_texts[x][y]:
+            cell_texts[x][y] += f", {country}"
+        else:
+            cell_texts[x][y] = country
+
+    ax.set_xlim(-0.5, grid_size - 0.5)
+    ax.set_ylim(-0.5, grid_size - 0.5)
+    ax.set_xticks(range(grid_size))
+    ax.set_yticks(range(grid_size))
+    ax.grid(True, color='gray', linestyle='--', alpha=0.5)
+
+    for i in range(grid_size):
+        for j in range(grid_size):
+            if cell_texts[i][j]:
+                ax.text(j, grid_size - 1 - i, cell_texts[i][j],
+                        ha='center', va='center', fontsize=8, wrap=True)
+
+    ax.set_title("Kohonen Map - Countries per Neuron")
+    plt.tight_layout()
+    plt.show()
 
 def run_kohonen(config, standardization_data, countries, num_variables_data):
     epochs_factor = config['epochs_factor']
@@ -104,6 +132,7 @@ def run_kohonen(config, standardization_data, countries, num_variables_data):
     for bmu_index, country_list in country_map.items():
         print(f"Neuron {bmu_index}: {', '.join(country_list)}")
 
+    _plot_country_map(kohonen, countries, neuron_assignments)
 
 def run_pca_manual(standardization_data):
     print("--- PCA (Manual) ---")
