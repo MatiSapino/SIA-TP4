@@ -7,7 +7,7 @@ objetivo de evaluar Métodos de Aprendizaje No Supervisado usando Modelos de Red
 
 [Enunciado](Enunciado.pdf)
 
-[Presentación](Presentacion.pdf) (FALTA AGREGAR)
+[Presentación](Presentacion.pdf)
 
 ### Requisitos
 
